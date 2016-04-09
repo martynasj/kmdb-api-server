@@ -1,44 +1,61 @@
 /**
  * Created by martynasjankauskas on 08/04/16.
  */
-const mongojs = require('mongojs');
+const mongoose = require('mongoose');
+const Movie = require('../models/Movie');
 
-var db = mongojs('mongodb://localhost:27017/IMDB');
-var movies = db.collection('movies');
+const url = 'mongodb://localhost:27017/IMDB';
 
-const moviesController = {
+mongoose.connect(url);
 
-    getMovies(callback) {
-        movies.find((function(err, items) {
-            callback(items);
-        }));
-    },
+class MoviesController {
 
-    getMovieById(id, callback) {
-        movies.find({_id: mongojs.ObjectID(id)}, function(err, item) {
-            callback(item);
-        })
-    },
-
-    insertMovie(movie, callback) {
-        // some dumb check
-        const result = {
-        };
-
-        if (movie.year > 1990) {
-            result.status = 'Error';
-            result.reason = 'year invalid';
-            return callback(result);
-        }
-
-        movies.insert(movie, function(err, result) {
-            if (err) {
-                throw new Error(err);
-            }
-            return callback(result);
+    static getMovies(callback) {
+        Movie.find({}, (err, docs) => {
+            callback(docs);
         });
+    }
+
+    static getMovieById(id, callback) {
+        Movie.find({_id: id}, function(err, docs) {
+            let result = docs;
+            if (docs.length === 0) {
+                result = {status: `No documents matched id: ${id}`};
+            }
+            callback(result);
+        })
+    }
+
+    static insertMovie(movie, callback) {
+        let result = {};
+
+        const newMovie = new Movie(movie);
+        newMovie.save( (err, doc) => {
+            if (err) {
+                result = err;
+            } else {
+                result.id = doc._id;
+                result.status = 'Insert success';
+            }
+            callback(result);
+        });
+
+    }
+
+    static deleteMovie(id, callback) {
+        let result = {};
+        Movie.remove({_id: id}, (err, doc) => {
+            if (err) {
+                result = err;
+            } else {
+                // TODO: doesn't work
+                result.status = "Remove success";
+                result = doc;
+            }
+            callback(result);
+        })
     }
 
 };
 
-module.exports = moviesController;
+module.exports = MoviesController;
